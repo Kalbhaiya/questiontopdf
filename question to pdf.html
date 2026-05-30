@@ -1,0 +1,830 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Maker Pro V10 - Hindi Fix</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { primary: '#2563eb', darkBg: '#0f172a', darkPanel: '#1e293b' } } }
+        }
+    </script>
+
+    <!-- Google Fonts for Perfect Hindi Support -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- MathJax for Physics/Maths Formulas -->
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' },
+            startup: { typeset: false } 
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        /* Base & Scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        
+        body { background-color: #cbd5e1; overflow: hidden; transition: background-color 0.3s; text-rendering: optimizeLegibility; }
+        .dark body { background-color: #0f172a; color: #f8fafc; }
+
+        /* Sidebar animations */
+        #sidebar { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .sidebar-hidden { transform: translateX(-100%); }
+
+        /* A4 Page Workspace */
+        .preview-workspace { padding: 2.5rem; display: flex; flex-direction: column; gap: 2.5rem; align-items: center; width: 100%; }
+        .a4-page {
+            width: 210mm; height: 297mm; background: white; color: black;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            position: relative; box-sizing: border-box; overflow: hidden; flex-shrink: 0;
+            transition: box-shadow 0.3s ease;
+        }
+        .dark .a4-page { box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+
+        /* Dynamic Border Styles */
+        .page-content-wrapper { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden;}
+        .border-solid-style { border: var(--border-w) solid var(--theme-color, #1e293b); }
+        .border-double-style { border: calc(var(--border-w) * 2) double var(--theme-color, #1e293b); }
+        .border-none-style { border: none; }
+        .content-layer { position: relative; z-index: 10; flex-grow: 1; width: 100%; height: 100%; overflow: hidden; }
+
+        /* Watermark styling */
+        .page-watermark {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(var(--wm-angle, -45deg));
+            font-size: var(--wm-size, 6rem); opacity: var(--wm-opacity, 0.08);
+            text-align: center; line-height: 1.1; white-space: pre-wrap; pointer-events: none;
+            z-index: 1; user-select: none; font-weight: 900; width: 140%;
+            color: var(--theme-color); display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+
+        /* Question Box Styling */
+        .q-box {
+            padding: var(--q-pad);
+            border-width: var(--q-bw); border-style: solid; border-color: var(--theme-color);
+            border-radius: var(--q-rad); margin-bottom: var(--q-space);
+            background-color: var(--q-bg, transparent); page-break-inside: avoid;
+            word-wrap: break-word; overflow-wrap: break-word;
+        }
+
+        /* Hindi Text Fix */
+        .text-left { text-align: left !important; }
+        .text-justify { text-align: justify !important; }
+
+        /* Print Override */
+        @media print {
+            body * { visibility: hidden; }
+            #preview-container, #preview-container * { visibility: visible; }
+            #preview-container { position: absolute; left: 0; top: 0; padding: 0 !important; width: 100%; }
+            .preview-workspace { padding: 0; gap: 0; }
+            .a4-page { box-shadow: none !important; margin: 0 !important; border-radius: 0; page-break-after: always; }
+        }
+
+        /* Standardized Tailwind Toggle Switch */
+        .toggle-switch { position: relative; display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0;}
+        .toggle-switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+        .toggle-bg { width: 34px; height: 18px; background-color: #cbd5e1; border-radius: 9999px; transition: 0.3s; }
+        .dark .toggle-bg { background-color: #475569; }
+        .toggle-switch input:checked + .toggle-bg { background-color: #2563eb; }
+        .toggle-circle { position: absolute; top: 2px; left: 2px; background-color: white; border-radius: 50%; height: 14px; width: 14px; transition: transform 0.3s; }
+        .toggle-switch input:checked + .toggle-bg + .toggle-circle { transform: translateX(16px); }
+
+        /* Accordion CSS */
+        .accordion-content { display: none; }
+        .accordion-content.active { display: block; animation: slideDown 0.2s ease-out forwards; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Sliders */
+        input[type=range] { height: 4px; border-radius: 2px; outline: none; }
+    </style>
+</head>
+<body class="flex h-screen w-full">
+
+    <!-- FLOATING OPEN BUTTON (Visible when sidebar hidden) -->
+    <button id="btn-open-sidebar" onclick="toggleSidebar()" class="fixed top-4 left-4 z-30 bg-slate-900 text-white p-3 rounded-full shadow-2xl hover:bg-primary transition-all hidden transform hover:scale-110">
+        <i data-lucide="menu" class="w-6 h-6"></i>
+    </button>
+
+    <!-- COMPACT LEFT SIDEBAR -->
+    <div id="sidebar" class="w-full sm:w-[460px] bg-white dark:bg-darkPanel shadow-2xl h-full flex flex-col z-40 flex-shrink-0 absolute md:relative border-r border-gray-200 dark:border-gray-700 transition-colors">
+        
+        <!-- App Header (With TOP PDF BUTTON) -->
+        <div class="p-4 bg-slate-900 dark:bg-black text-white flex justify-between items-center shrink-0 shadow-md">
+            <div class="flex items-center gap-2">
+                <i data-lucide="book-open-check" class="w-5 h-5 text-blue-400"></i>
+                <h1 class="text-lg font-bold tracking-wide">Exam Maker Pro <span class="text-[10px] text-emerald-400 align-top">V10</span></h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <!-- TOP PDF BUTTON -->
+                <button onclick="downloadPDF()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm" title="Generate PDF">
+                    <i data-lucide="file-down" class="w-4 h-4"></i> PDF
+                </button>
+                <div class="h-4 w-px bg-slate-600 mx-1"></div>
+                <button onclick="toggleDarkMode()" class="text-slate-400 hover:text-white transition-colors" title="Toggle Dark Mode"><i data-lucide="moon" id="theme-icon" class="w-4 h-4"></i></button>
+                <input type="color" id="themeColor" value="#0f172a" class="w-6 h-6 rounded cursor-pointer border border-slate-500 hover:border-white transition-colors" title="Paper Theme Color" onchange="saveAndRender()">
+                <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white transition-colors ml-1"><i data-lucide="panel-left-close" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div id="update-indicator" class="h-0.5 w-full bg-primary origin-left scale-x-0 transition-transform duration-200"></div>
+
+        <!-- Global Expand/Collapse -->
+        <div class="px-5 py-2.5 flex justify-between items-center bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700">
+            <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1" id="save-status"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Auto-Saved</span>
+            <div class="flex gap-3 text-xs font-semibold">
+                <button onclick="toggleAllAccordions(true)" class="text-primary hover:underline">Expand All</button>
+                <span class="text-gray-300 dark:text-gray-600">|</span>
+                <button onclick="toggleAllAccordions(false)" class="text-gray-500 hover:underline">Collapse All</button>
+            </div>
+        </div>
+
+        <!-- Scrollable Settings -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+            
+            <!-- 1. QUESTIONS AREA -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
+                <button class="w-full px-5 py-3.5 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" onclick="toggleAcc('acc-qs')">
+                    <span class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm"><i data-lucide="clipboard-list" class="w-4 h-4 text-primary"></i> Write Questions</span>
+                    <i data-lucide="chevron-down" id="icon-acc-qs" class="w-4 h-4 text-gray-400 transition-transform"></i>
+                </button>
+                <div id="acc-qs" class="accordion-content active p-4 border-t border-gray-100 dark:border-gray-700 space-y-3 bg-gray-50/50 dark:bg-slate-800/50">
+                    <textarea id="rawText" class="w-full h-40 bg-white dark:bg-slate-900 border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-xs focus:ring-2 focus:ring-primary outline-none resize-none font-mono dark:text-white shadow-inner" placeholder="1. What is Physics?&#10;(A) Science&#10;(B) Math" oninput="saveAndRender()"></textarea>
+                    <button onclick="document.getElementById('rawText').value=''; saveAndRender();" class="w-full text-xs py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 font-bold border border-red-100 dark:border-red-800 transition-colors flex justify-center items-center gap-1"><i data-lucide="trash-2" class="w-3 h-3"></i> Clear All Text</button>
+                </div>
+            </div>
+
+            <!-- 2. HEADER DETAILS -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
+                <button class="w-full px-5 py-3.5 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" onclick="toggleAcc('acc-head')">
+                    <span class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm"><i data-lucide="layout-template" class="w-4 h-4 text-blue-500"></i> Header Details</span>
+                    <i data-lucide="chevron-down" id="icon-acc-head" class="w-4 h-4 text-gray-400 transition-transform"></i>
+                </button>
+                <div id="acc-head" class="accordion-content active p-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                    <div class="space-y-2.5">
+                        <div class="flex gap-3 items-center"><label class="toggle-switch"><input type="checkbox" id="t-inst" checked onchange="saveAndRender()"><div class="toggle-bg"></div><div class="toggle-circle"></div></label><input type="text" id="v-inst" value="INTERNATIONAL PUBLIC SCHOOL" class="flex-1 border border-gray-300 dark:border-gray-600 bg-transparent rounded-lg p-2 text-xs font-bold uppercase dark:text-white outline-none focus:border-primary" oninput="saveAndRender()"></div>
+                        <div class="flex gap-3 items-center"><label class="toggle-switch"><input type="checkbox" id="t-exam" checked onchange="saveAndRender()"><div class="toggle-bg"></div><div class="toggle-circle"></div></label><input type="text" id="v-exam" value="Annual Examination 2026" class="flex-1 border border-gray-300 dark:border-gray-600 bg-transparent rounded-lg p-2 text-xs dark:text-white outline-none focus:border-primary" oninput="saveAndRender()"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <div class="flex gap-2 items-center"><label class="toggle-switch"><input type="checkbox" id="t-sub" checked onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label><input type="text" id="v-sub" value="Physics" class="w-full border border-gray-300 dark:border-gray-600 bg-transparent rounded-md p-1.5 text-xs dark:text-white outline-none focus:border-primary" oninput="saveAndRender()"></div>
+                        <div class="flex gap-2 items-center"><label class="toggle-switch"><input type="checkbox" id="t-chapter" checked onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label><input type="text" id="v-chapter" value="Ch 1: Electricity" class="w-full border border-gray-300 dark:border-gray-600 bg-transparent rounded-md p-1.5 text-xs dark:text-white outline-none focus:border-primary" oninput="saveAndRender()"></div>
+                        <div class="flex gap-2 items-center col-span-2"><label class="toggle-switch"><input type="checkbox" id="t-topic" checked onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label><input type="text" id="v-topic" value="Topic: Ohm's Law" class="w-full border border-gray-300 dark:border-gray-600 bg-transparent rounded-md p-1.5 text-xs dark:text-white outline-none focus:border-primary" oninput="saveAndRender()"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <div class="flex gap-2 items-center"><label class="toggle-switch"><input type="checkbox" id="t-class" checked onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label><input type="text" id="v-class" value="Class 12" class="w-full border border-gray-300 dark:border-gray-600 bg-transparent rounded-md p-1.5 text-xs dark:text-white outline-none focus:border-primary" oninput="saveAndRender()"></div>
+                        <div class="flex gap-2 items-center"><label class="toggle-switch"><input type="checkbox" id="t-date" checked onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label><input type="text" id="v-date" value="Date: 24/05/2026" class="w-full border border-gray-300 dark:border-gray-600 bg-transparent rounded-md p-1.5 text-xs dark:text-white outline-none focus:border-primary" oninput="saveAndRender()"></div>
+                        <div class="flex gap-2 items-center col-span-2"><label class="toggle-switch"><input type="checkbox" id="t-marks" checked onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label><input type="text" id="v-marks" value="Max Marks: 100" class="w-full border border-gray-300 dark:border-gray-600 bg-transparent rounded-md p-1.5 text-xs dark:text-white outline-none focus:border-primary" oninput="saveAndRender()"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. STUDENT & SIGNATURE -->
+            <div class="bg-indigo-50/70 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800 shadow-sm overflow-hidden transition-colors">
+                <button class="w-full px-5 py-3.5 flex justify-between items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors" onclick="toggleAcc('acc-stu')">
+                    <span class="font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-2 text-sm"><i data-lucide="user-check" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Student Info & Signature</span>
+                    <i data-lucide="chevron-down" id="icon-acc-stu" class="w-4 h-4 text-indigo-400 transition-transform"></i>
+                </button>
+                <div id="acc-stu" class="accordion-content p-4 border-t border-indigo-100 dark:border-indigo-800 space-y-3">
+                    <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-indigo-100 dark:border-slate-700 shadow-sm">
+                        <label class="flex items-center gap-3 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer"><label class="toggle-switch"><input type="checkbox" id="t-stu-name" checked onchange="saveAndRender()"><div class="toggle-bg"></div><div class="toggle-circle"></div></label> Name Box</label>
+                        <input type="text" id="v-studentName" placeholder="Pre-fill Name" class="border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-slate-900 rounded p-1.5 text-xs w-32 dark:text-white outline-none focus:border-indigo-500" oninput="saveAndRender()">
+                    </div>
+                    <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-indigo-100 dark:border-slate-700 shadow-sm">
+                        <label class="flex items-center gap-3 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer w-full"><label class="toggle-switch"><input type="checkbox" id="t-stu-roll" checked onchange="saveAndRender()"><div class="toggle-bg"></div><div class="toggle-circle"></div></label> Roll Number Box</label>
+                    </div>
+                    <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-indigo-100 dark:border-slate-700 shadow-sm">
+                        <label class="flex items-center gap-3 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer"><label class="toggle-switch"><input type="checkbox" id="t-stu-sign" checked onchange="saveAndRender()"><div class="toggle-bg"></div><div class="toggle-circle"></div></label> Signature Box</label>
+                        <div class="relative w-28">
+                            <button class="w-full border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded p-1.5 text-[11px] font-bold flex items-center justify-center gap-1 hover:bg-indigo-100 transition-colors"><i data-lucide="upload" class="w-3 h-3"></i> Upload Sign</button>
+                            <input type="file" id="sig-upload" accept="image/*" class="absolute left-0 top-0 opacity-0 cursor-pointer w-full h-full" onchange="handleSignature(event)">
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-[10px] px-2"><span id="sig-status" class="text-emerald-600 font-bold hidden flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> Sign Loaded</span><button id="sig-clear" class="text-red-500 font-bold hidden hover:underline" onclick="clearSignature()">Clear Image</button></div>
+                </div>
+            </div>
+
+            <!-- 4. QUESTION LAYOUT -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
+                <button class="w-full px-5 py-3.5 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" onclick="toggleAcc('acc-qlayout')">
+                    <span class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm"><i data-lucide="box" class="w-4 h-4 text-emerald-500"></i> Question Box Layout</span>
+                    <i data-lucide="chevron-down" id="icon-acc-qlayout" class="w-4 h-4 text-gray-400 transition-transform"></i>
+                </button>
+                <div id="acc-qlayout" class="accordion-content p-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
+                    <div class="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label class="flex items-center gap-3 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer"><label class="toggle-switch"><input type="checkbox" id="t-q-box" onchange="saveAndRender()"><div class="toggle-bg"></div><div class="toggle-circle"></div></label> Box BG Color</label>
+                        <label class="flex items-center gap-3 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer"><label class="toggle-switch"><input type="checkbox" id="t-q-border" onchange="saveAndRender()"><div class="toggle-bg"></div><div class="toggle-circle"></div></label> Box Border</label>
+                    </div>
+                    <div class="space-y-3 px-1">
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Inner Padding: <span id="lbl-q-pad" class="font-bold">2</span>px</span><input type="range" id="r-q-pad" min="0" max="20" value="2" class="w-32 accent-emerald-500" oninput="document.getElementById('lbl-q-pad').innerText=this.value; saveAndRender();"></div>
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Border Width: <span id="lbl-q-bw" class="font-bold">1</span>px</span><input type="range" id="r-q-bw" min="1" max="5" value="1" class="w-32 accent-emerald-500" oninput="document.getElementById('lbl-q-bw').innerText=this.value; saveAndRender();"></div>
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Border Radius: <span id="lbl-q-rad" class="font-bold">4</span>px</span><input type="range" id="r-q-rad" min="0" max="20" value="4" class="w-32 accent-emerald-500" oninput="document.getElementById('lbl-q-rad').innerText=this.value; saveAndRender();"></div>
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Q Spacing: <span id="lbl-q-space" class="font-bold">20</span>px</span><input type="range" id="r-q-space" min="5" max="40" value="20" class="w-32 accent-emerald-500" oninput="document.getElementById('lbl-q-space').innerText=this.value; saveAndRender();"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. APPEARANCE & PAGE LAYOUT -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
+                <button class="w-full px-5 py-3.5 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" onclick="toggleAcc('acc-page')">
+                    <span class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm"><i data-lucide="sliders" class="w-4 h-4 text-purple-500"></i> Page Appearance</span>
+                    <i data-lucide="chevron-down" id="icon-acc-page" class="w-4 h-4 text-gray-400 transition-transform"></i>
+                </button>
+                <div id="acc-page" class="accordion-content p-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
+                    <div class="grid grid-cols-2 gap-y-4 gap-x-3 bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label class="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer"><label class="toggle-switch"><input type="checkbox" id="t-boldQ" checked onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label> Bold Qs</label>
+                        <label class="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer"><label class="toggle-switch"><input type="checkbox" id="t-boldO" onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label> Bold Opts</label>
+                        <label class="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer"><label class="toggle-switch"><input type="checkbox" id="t-autoNum" checked onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label> Auto Num</label>
+                        <label class="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer"><label class="toggle-switch"><input type="checkbox" id="t-line" onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label> Dividers</label>
+                        
+                        <!-- FIX: JUSTIFY TEXT TOGGLE (Default OFF for Hindi safety) -->
+                        <label class="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer col-span-2 pt-1 border-t border-gray-200 dark:border-gray-700" title="Keep OFF for better Hindi Text rendering">
+                            <label class="toggle-switch"><input type="checkbox" id="t-justify" onchange="saveAndRender()"><div class="toggle-bg scale-90 origin-left"></div><div class="toggle-circle scale-90 origin-left"></div></label> 
+                            Justify Text (Keep OFF for Hindi)
+                        </label>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Font Family</label>
+                            <select id="s-font" class="w-full border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-slate-900 rounded-md p-2 text-xs outline-none dark:text-white" onchange="saveAndRender()">
+                                <option value="'Noto Sans Devanagari', sans-serif" selected>Noto Sans (Best for Hindi)</option>
+                                <option value="'Mukta', sans-serif">Mukta (Hindi Variant)</option>
+                                <option value="'Times New Roman', serif">Times New Roman</option>
+                                <option value="Arial, sans-serif">Arial</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Page Border</label>
+                            <select id="s-border" class="w-full border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-slate-900 rounded-md p-2 text-xs outline-none dark:text-white" onchange="saveAndRender()">
+                                <option value="border-solid-style">Solid Line</option>
+                                <option value="border-double-style" selected>Double Line</option>
+                                <option value="border-none-style">None</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 px-1 pt-1">
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Font Size: <span id="lbl-font" class="font-bold">14</span>px</span><input type="range" id="r-font" min="11" max="22" value="14" class="w-32 accent-purple-500" oninput="document.getElementById('lbl-font').innerText=this.value; saveAndRender();"></div>
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Page Margin: <span id="lbl-margin" class="font-bold">15</span>mm</span><input type="range" id="r-margin" min="8" max="30" value="15" class="w-32 accent-purple-500" oninput="document.getElementById('lbl-margin').innerText=this.value; saveAndRender();"></div>
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Content Padding: <span id="lbl-cpad" class="font-bold">8</span>mm</span><input type="range" id="r-cpad" min="2" max="20" value="8" class="w-32 accent-purple-500" oninput="document.getElementById('lbl-cpad').innerText=this.value; saveAndRender();"></div>
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Border Width: <span id="lbl-pbw" class="font-bold">4</span>px</span><input type="range" id="r-pbw" min="1" max="10" value="4" class="w-32 accent-purple-500" oninput="document.getElementById('lbl-pbw').innerText=this.value; saveAndRender();"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. WATERMARK -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-4 transition-colors">
+                <button class="w-full px-5 py-3.5 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" onclick="toggleAcc('acc-wm')">
+                    <span class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm"><i data-lucide="shield-alert" class="w-4 h-4 text-orange-500"></i> Security Watermark</span>
+                    <i data-lucide="chevron-down" id="icon-acc-wm" class="w-4 h-4 text-gray-400 transition-transform"></i>
+                </button>
+                <div id="acc-wm" class="accordion-content p-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
+                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-gray-700 dark:text-gray-300">Enable Watermark</span><label class="toggle-switch"><input type="checkbox" id="t-watermark" checked onchange="saveAndRender()"><div class="toggle-bg"></div><div class="toggle-circle"></div></label></div>
+                    <textarea id="v-watermark" class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-xs font-bold uppercase text-center outline-none resize-none dark:text-white focus:border-orange-500" rows="2" oninput="saveAndRender()">SHARMA CLASSES&#10;DO NOT COPY</textarea>
+                    
+                    <div class="space-y-3 px-1 mt-2">
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Size: <span id="lbl-wm-size" class="font-bold">6</span>rem</span><input type="range" id="r-wm-size" min="2" max="12" step="0.5" value="6" class="w-32 accent-orange-500" oninput="document.getElementById('lbl-wm-size').innerText=this.value; saveAndRender();"></div>
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Opacity: <span id="lbl-opacity" class="font-bold">8</span>%</span><input type="range" id="r-opacity" min="2" max="50" value="8" class="w-32 accent-orange-500" oninput="document.getElementById('lbl-opacity').innerText=this.value; saveAndRender();"></div>
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-medium"><span>Angle: <span id="lbl-wm-angle" class="font-bold">-45</span>°</span><input type="range" id="r-wm-angle" min="-90" max="90" value="-45" class="w-32 accent-orange-500" oninput="document.getElementById('lbl-wm-angle').innerText=this.value; saveAndRender();"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Download Action (BOTTOM) -->
+        <div class="p-4 bg-white dark:bg-darkPanel border-t border-gray-200 dark:border-gray-700 shrink-0 z-20 shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
+            <button onclick="downloadPDF()" class="w-full bg-primary hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 transition-all shadow-md transform active:scale-95">
+                <i data-lucide="printer" class="w-5 h-5"></i> Export Final PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- RIGHT PREVIEW AREA -->
+    <div class="flex-1 h-full overflow-y-auto relative bg-slate-200 dark:bg-[#0b1120] transition-colors" id="preview-container">
+        <div id="preview-workspace" class="preview-workspace">
+            <!-- Pages rendered here -->
+        </div>
+    </div>
+
+    <!-- Hidden Pre-Render Box for MathJax -->
+    <div id="math-measure-box" class="absolute top-[-9999px] left-[-9999px] visibility-hidden overflow-visible bg-white text-left"></div>
+
+    <!-- MODALS -->
+    <!-- Session Restore Modal -->
+    <div id="session-modal" class="fixed inset-0 bg-slate-900/70 z-50 hidden flex-col justify-center items-center backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl w-80 text-center border border-gray-100 dark:border-gray-700">
+            <i data-lucide="history" class="w-12 h-12 text-primary mx-auto mb-4"></i>
+            <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2">Session Found</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">We found unsaved data from your last visit. Want to restore it?</p>
+            <div class="flex gap-3">
+                <button onclick="clearSession()" class="flex-1 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Start Fresh</button>
+                <button onclick="restoreSession()" class="flex-1 py-2.5 text-sm font-bold text-white bg-primary rounded-lg hover:bg-blue-700 transition-colors shadow-md">Restore</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DETAILED EXPORT PROGRESS MODAL -->
+    <div id="progress-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex-col justify-center items-center backdrop-blur-sm transition-opacity">
+        <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl w-80 text-center border border-gray-100 dark:border-gray-700">
+            <div class="w-16 h-16 bg-blue-50 dark:bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-5 border-2 border-blue-100 dark:border-slate-600">
+                <i data-lucide="cog" class="w-8 h-8 text-primary animate-spin" style="animation-duration: 3s;"></i>
+            </div>
+            <h3 id="prog-title" class="text-xl font-black text-gray-900 dark:text-white mb-2">Preparing Pages</h3>
+            <p id="prog-desc" class="text-sm text-gray-500 dark:text-gray-400 mb-6">Aligning layout and formulas...</p>
+            
+            <div class="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-3 mb-2 overflow-hidden border border-gray-200 dark:border-slate-600">
+                <div id="progress-bar" class="bg-primary h-full rounded-full transition-all duration-300 shadow-[inset_0_2px_4px_rgba(255,255,255,0.3)]" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between items-center text-xs font-bold text-primary dark:text-indigo-400">
+                <span id="prog-step">Step 1 of 3</span>
+                <span id="progress-text">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // ----------------------------------------------------
+        // INITIALIZATION & DARK MODE & SESSION
+        // ----------------------------------------------------
+        const STORAGE_KEY = 'examMakerProV10Session';
+        let signatureBase64 = null;
+
+        window.onload = () => {
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            if(localStorage.getItem(STORAGE_KEY)) {
+                document.getElementById('session-modal').classList.replace('hidden', 'flex');
+            } else {
+                triggerUpdate();
+            }
+        };
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        function clearSession() {
+            localStorage.removeItem(STORAGE_KEY);
+            document.getElementById('session-modal').classList.replace('flex', 'hidden');
+            triggerUpdate();
+        }
+
+        function restoreSession() {
+            try {
+                const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+                document.getElementById('rawText').value = data.rawText || '';
+                
+                if(data.ui) {
+                    for(let key in data.ui) {
+                        const el = document.getElementById(key);
+                        if(el) {
+                            if(el.type === 'checkbox') el.checked = data.ui[key];
+                            else el.value = data.ui[key];
+                            
+                            if(el.type === 'range') {
+                                const lbl = document.getElementById('lbl-' + key.replace('r-',''));
+                                if(lbl) lbl.innerText = el.value;
+                            }
+                        }
+                    }
+                }
+                if(data.signatureBase64) {
+                    signatureBase64 = data.signatureBase64;
+                    document.getElementById('sig-status').classList.remove('hidden');
+                    document.getElementById('sig-clear').classList.remove('hidden');
+                }
+                
+                document.getElementById('session-modal').classList.replace('flex', 'hidden');
+                triggerUpdate(false); 
+            } catch(e) {
+                console.error("Session restore failed", e);
+                clearSession();
+            }
+        }
+
+        function saveStateToLocal() {
+            let uiData = {};
+            const elements = document.querySelectorAll('input[type="text"], input[type="checkbox"], input[type="range"], select, input[type="color"], textarea:not(#rawText)');
+            elements.forEach(el => {
+                if(el.id) uiData[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+            });
+
+            const dataToSave = {
+                rawText: document.getElementById('rawText').value,
+                ui: uiData,
+                signatureBase64: signatureBase64
+            };
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+            const status = document.getElementById('save-status');
+            status.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Saving...`;
+            lucide.createIcons();
+            setTimeout(() => { 
+                status.innerHTML = `<i data-lucide="check-circle-2" class="w-3 h-3"></i> Auto-Saved`; 
+                lucide.createIcons();
+            }, 400);
+        }
+
+        // ----------------------------------------------------
+        // UI INTERACTIONS
+        // ----------------------------------------------------
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const btn = document.getElementById('btn-open-sidebar');
+            sidebar.classList.toggle('sidebar-hidden');
+            if (sidebar.classList.contains('sidebar-hidden')) {
+                setTimeout(() => { sidebar.style.display = 'none'; btn.classList.remove('hidden'); }, 400);
+            } else {
+                sidebar.style.display = 'flex';
+                btn.classList.add('hidden');
+                setTimeout(() => sidebar.classList.remove('sidebar-hidden'), 10);
+            }
+        }
+
+        function toggleAcc(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            content.classList.toggle('active');
+            icon.style.transform = content.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+
+        function toggleAllAccordions(expand) {
+            const contents = document.querySelectorAll('.accordion-content');
+            const icons = document.querySelectorAll('[id^="icon-acc-"]');
+            contents.forEach(c => expand ? c.classList.add('active') : c.classList.remove('active'));
+            icons.forEach(i => i.style.transform = expand ? 'rotate(180deg)' : 'rotate(0deg)');
+        }
+
+        function handleSignature(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    signatureBase64 = e.target.result;
+                    document.getElementById('sig-status').classList.remove('hidden');
+                    document.getElementById('sig-clear').classList.remove('hidden');
+                    saveAndRender();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        function clearSignature() {
+            signatureBase64 = null;
+            document.getElementById('sig-upload').value = '';
+            document.getElementById('sig-status').classList.add('hidden');
+            document.getElementById('sig-clear').classList.add('hidden');
+            saveAndRender();
+        }
+
+        // ----------------------------------------------------
+        // RENDERING ENGINE
+        // ----------------------------------------------------
+        const defaultText = `28. Q28. द्विघात व्यंजक 7x² - 7x + 22 का न्यूनतम मान ज्ञात कीजिए। Find the minimum value of the quadratic expression 7x² - 7x + 22.
+(A) 55/4
+(B) 45/4
+(C) 35/4
+(D) 25/4
+
+भ रतीय संवि ध न के निर्माण में कितना समय लगा था? (This is a test for Hindi Rendering)
+(a) 2 वर्ष 11 माह 18 दिन
+(b) 3 वर्ष
+(c) 1 वर्ष
+(d) 5 वर्ष
+
+A transformer transforms
+(a) Frequency
+(b) Voltage
+(c) Current
+(d) Power`;
+        document.getElementById('rawText').value = defaultText;
+
+        const optionRegex = /^\s*[\(]?[a-eA-E0-9][\)\.]\s+/;
+        function parseQuestions(text) {
+            const lines = text.split('\n');
+            const questions = [];
+            let currentQ = null;
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                if (optionRegex.test(line)) {
+                    if (currentQ) currentQ.options.push(line);
+                    else currentQ = { text: line, options: [] };
+                } else {
+                    if (currentQ && currentQ.options.length > 0) {
+                        questions.push(currentQ);
+                        currentQ = { text: line, options: [] };
+                    } else {
+                        if (!currentQ) currentQ = { text: line, options: [] };
+                        else currentQ.text += ' ' + line;
+                    }
+                }
+            }
+            if (currentQ) questions.push(currentQ);
+            return questions;
+        }
+
+        let debounceTimer;
+        function saveAndRender() { triggerUpdate(true); }
+
+        function triggerUpdate(doSave = false) {
+            if(doSave) saveStateToLocal();
+            const ind = document.getElementById('update-indicator');
+            ind.style.transform = 'scaleX(1)';
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                buildPDFPreviewAsync().then(() => { ind.style.transform = 'scaleX(0)'; });
+            }, 300);
+        }
+
+        function updateCSSVars() {
+            const root = document.documentElement.style;
+            root.setProperty('--theme-color', document.getElementById('themeColor').value);
+            root.setProperty('--wm-size', document.getElementById('r-wm-size').value + 'rem');
+            root.setProperty('--wm-opacity', document.getElementById('r-opacity').value / 100);
+            root.setProperty('--wm-angle', document.getElementById('r-wm-angle').value + 'deg');
+            root.setProperty('--border-w', document.getElementById('r-pbw').value + 'px');
+            
+            const isBox = document.getElementById('t-q-box').checked;
+            const isBorder = document.getElementById('t-q-border').checked;
+            
+            root.setProperty('--q-pad', document.getElementById('r-q-pad').value + 'px');
+            root.setProperty('--q-bw', isBorder ? document.getElementById('r-q-bw').value + 'px' : '0px');
+            root.setProperty('--q-rad', document.getElementById('r-q-rad').value + 'px');
+            root.setProperty('--q-space', document.getElementById('r-q-space').value + 'px');
+            root.setProperty('--q-bg', isBox ? document.getElementById('themeColor').value + '0A' : 'transparent');
+        }
+
+        async function buildPDFPreviewAsync() {
+            updateCSSVars();
+
+            const workspace = document.getElementById('preview-workspace');
+            const measureBox = document.getElementById('math-measure-box');
+            measureBox.innerHTML = '';
+
+            const fontFam = document.getElementById('s-font').value;
+            const fontSize = document.getElementById('r-font').value + 'px';
+            const marginMM = parseInt(document.getElementById('r-margin').value);
+            const contentPaddingMM = parseInt(document.getElementById('r-cpad').value);
+            const borderClass = document.getElementById('s-border').value;
+            const bWidth = parseInt(document.getElementById('r-pbw').value);
+
+            const MM_TO_PX = 3.779527;
+            const totalOffsetPx = (marginMM * MM_TO_PX * 2) + (contentPaddingMM * MM_TO_PX * 2) + (bWidth * 2);
+            measureBox.style.width = `calc(210mm - ${totalOffsetPx}px)`;
+            measureBox.style.fontFamily = fontFam;
+            measureBox.style.fontSize = fontSize;
+
+            let headerHTML = buildHeaderHTML();
+            let qHTMLs = buildQuestionsHTML();
+
+            if (headerHTML) measureBox.appendChild(createDiv(headerHTML));
+            qHTMLs.forEach(html => measureBox.appendChild(createDiv(html)));
+
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                try { await MathJax.typesetPromise([measureBox]); } catch(e) {}
+            }
+
+            workspace.innerHTML = '';
+            const hasWatermark = document.getElementById('t-watermark').checked;
+            const watermarkText = document.getElementById('v-watermark').value.replace(/\n/g, '<br>');
+
+            const createNewPage = () => {
+                const page = document.createElement('div');
+                page.className = `a4-page`; page.style.fontFamily = fontFam;
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = `page-content-wrapper ${borderClass}`;
+                wrapper.style.top = marginMM + 'mm'; wrapper.style.bottom = marginMM + 'mm';
+                wrapper.style.left = marginMM + 'mm'; wrapper.style.right = marginMM + 'mm';
+
+                const layer = document.createElement('div');
+                layer.className = 'content-layer';
+                layer.style.padding = contentPaddingMM + 'mm'; layer.style.fontSize = fontSize;
+                
+                if (hasWatermark) {
+                    const wm = document.createElement('div');
+                    wm.className = 'page-watermark'; wm.innerHTML = watermarkText;
+                    wrapper.appendChild(wm);
+                }
+
+                wrapper.appendChild(layer); page.appendChild(wrapper); workspace.appendChild(page);
+                return layer;
+            };
+
+            let currentLayer = createNewPage();
+            const nodes = Array.from(measureBox.children);
+            const EPSILON = 2;
+
+            nodes.forEach(node => {
+                const clone = node.cloneNode(true);
+                currentLayer.appendChild(clone);
+                if (currentLayer.scrollHeight > currentLayer.clientHeight + EPSILON) {
+                    currentLayer.removeChild(clone);
+                    currentLayer = createNewPage();
+                    currentLayer.appendChild(clone);
+                }
+            });
+
+            const pages = workspace.querySelectorAll('.a4-page');
+            pages.forEach((pg, idx) => {
+                const footer = document.createElement('div');
+                footer.style.position = 'absolute'; footer.style.bottom = '2mm'; footer.style.width = '100%';
+                footer.style.textAlign = 'center'; footer.style.fontSize = '12px'; footer.style.color = '#64748b';
+                footer.innerText = `Page ${idx + 1} of ${pages.length}`;
+                pg.querySelector('.page-content-wrapper').appendChild(footer);
+            });
+
+            measureBox.innerHTML = '';
+        }
+
+        function createDiv(html) { const div = document.createElement('div'); div.innerHTML = html; return div; }
+
+        function buildQuestionsHTML() {
+            const isBoldQ = document.getElementById('t-boldQ').checked;
+            const isBoldO = document.getElementById('t-boldO').checked;
+            const isAutoNum = document.getElementById('t-autoNum').checked;
+            const showLine = document.getElementById('t-line').checked;
+            
+            // Text Justify Fix logic
+            const isJustify = document.getElementById('t-justify').checked;
+            const alignClass = isJustify ? 'text-justify' : 'text-left';
+
+            const qData = parseQuestions(document.getElementById('rawText').value);
+            
+            let arr = [];
+            qData.forEach((q, idx) => {
+                let numTxt = isAutoNum ? `<b>${idx + 1}.</b> ` : '';
+                let qClass = isBoldQ ? 'font-bold' : 'font-medium';
+                let oClass = isBoldO ? 'font-bold' : 'font-normal';
+                
+                let h = `<div class="q-box">`;
+                // Add alignClass here
+                h += `<div class="${qClass} ${alignClass} leading-relaxed break-words">${numTxt}${q.text}</div>`;
+                
+                if (q.options.length > 0) {
+                    h += `<div class="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 ml-4 ${oClass} ${alignClass}">`;
+                    q.options.forEach(opt => { h += `<div>${opt}</div>`; });
+                    h += `</div>`;
+                }
+                if(showLine && idx !== qData.length - 1) {
+                    h += `<div class="mt-3 border-b border-dashed border-gray-400 w-full"></div>`;
+                }
+                h += `</div>`;
+                arr.push(h);
+            });
+            return arr;
+        }
+
+        function buildHeaderHTML() {
+            const themeColor = document.getElementById('themeColor').value;
+            const showInst = document.getElementById('t-inst').checked;
+            const showExam = document.getElementById('t-exam').checked;
+            const showSub = document.getElementById('t-sub').checked;
+            const showChap = document.getElementById('t-chapter').checked;
+            const showTopic = document.getElementById('t-topic').checked;
+            const showClass = document.getElementById('t-class').checked;
+            const showDate = document.getElementById('t-date').checked;
+            const showMarks = document.getElementById('t-marks').checked;
+
+            const showStuName = document.getElementById('t-stu-name').checked;
+            const showStuRoll = document.getElementById('t-stu-roll').checked;
+            const showStuSign = document.getElementById('t-stu-sign').checked;
+
+            const hasTop = showInst || showExam || showSub || showChap || showTopic || showClass || showDate || showMarks;
+            const hasStu = showStuName || showStuRoll || showStuSign;
+
+            if(!hasTop && !hasStu) return '';
+
+            let h = `<div class="mb-4 pb-4 border-b-[2px]" style="border-color: ${themeColor};">`;
+            
+            if(hasTop) {
+                if(showInst) h += `<h1 class="text-2xl font-black text-center uppercase tracking-wider mb-1" style="color: ${themeColor};">${document.getElementById('v-inst').value}</h1>`;
+                if(showExam) h += `<h2 class="text-lg font-bold text-center mb-3" style="color: ${document.documentElement.classList.contains('dark') ? '#f8fafc' : '#1e293b'}">${document.getElementById('v-exam').value}</h2>`;
+                
+                h += `<div class="flex justify-between text-[13px] font-semibold px-1">`;
+                h += `<div class="space-y-1">`;
+                if(showSub) h += `<div>${document.getElementById('v-sub').value}</div>`;
+                if(showChap) h += `<div>${document.getElementById('v-chapter').value}</div>`;
+                if(showTopic) h += `<div>${document.getElementById('v-topic').value}</div>`;
+                if(showClass) h += `<div>${document.getElementById('v-class').value}</div>`;
+                h += `</div><div class="text-right space-y-1 flex flex-col justify-end">`;
+                if(showDate) h += `<div>${document.getElementById('v-date').value}</div>`;
+                if(showMarks) h += `<div>${document.getElementById('v-marks').value}</div>`;
+                h += `</div></div>`;
+            }
+
+            if(hasStu) {
+                const stuName = document.getElementById('v-studentName').value;
+                const nameDisplay = stuName.trim() !== '' ? `<span class="font-bold">${stuName}</span>` : '';
+                let signDisplay = signatureBase64 ? `<img src="${signatureBase64}" class="max-h-8 max-w-full absolute bottom-1 right-0">` : '';
+
+                h += `<div class="mt-4 flex flex-wrap gap-x-6 gap-y-3 p-3 border border-gray-400 bg-gray-50/10 text-[13px] items-end" style="border-color: ${themeColor}50;">`;
+                if (showStuName) h += `<div class="flex-1 flex items-end min-w-[200px]"><span class="font-bold whitespace-nowrap mr-2">Name:</span><div class="flex-1 border-b border-gray-600 border-dotted pb-0.5 text-center relative">${nameDisplay}</div></div>`;
+                if (showStuRoll) h += `<div class="w-28 flex items-end"><span class="font-bold whitespace-nowrap mr-2">Roll No:</span><div class="flex-1 border-b border-gray-600 border-dotted"></div></div>`;
+                if (showStuSign) h += `<div class="w-40 flex items-end relative h-8"><span class="font-bold whitespace-nowrap mr-2 absolute bottom-0">Sign:</span><div class="flex-1 border-b border-gray-600 border-dotted absolute bottom-0 right-0 w-28"></div>${signDisplay}</div>`;
+                h += `</div>`;
+            }
+            h += `</div>`;
+            return h;
+        }
+
+        // ----------------------------------------------------
+        // DETAILED PDF PROGRESS MODAL
+        // ----------------------------------------------------
+        async function downloadPDF() {
+            const container = document.getElementById('preview-workspace');
+            const docTitle = document.getElementById('v-exam').value || 'Exam_Document';
+            
+            const modal = document.getElementById('progress-modal');
+            const pBar = document.getElementById('progress-bar');
+            const pText = document.getElementById('progress-text');
+            const pTitle = document.getElementById('prog-title');
+            const pDesc = document.getElementById('prog-desc');
+            const pStep = document.getElementById('prog-step');
+            
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            
+            // Step 1
+            pBar.style.width = '20%'; pText.innerText = '20%';
+            pTitle.innerText = "Preparing Pages"; pDesc.innerText = "Optimizing layout spacing..."; pStep.innerText = "Step 1 of 3";
+            
+            const originalGap = container.style.gap; const originalPadding = container.style.padding;
+            container.style.gap = '0px'; container.style.padding = '0px';
+            const pages = document.querySelectorAll('.a4-page');
+            pages.forEach(p => { p.style.boxShadow = 'none'; p.style.margin = '0'; p.style.height = '297mm'; });
+
+            await new Promise(r => setTimeout(r, 600));
+
+            // Step 2
+            pBar.style.width = '60%'; pText.innerText = '60%';
+            pTitle.innerText = "Rendering Engine"; pDesc.innerText = "Processing Math & UI to Image..."; pStep.innerText = "Step 2 of 3";
+            
+            const opt = {
+                margin: 0, filename: `${docTitle}.pdf`,
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            try {
+                const worker = html2pdf().set(opt).from(container);
+                
+                // Step 3
+                setTimeout(()=> {
+                    pBar.style.width = '85%'; pText.innerText = '85%';
+                    pTitle.innerText = "Finalizing PDF"; pDesc.innerText = "Stitching document logic..."; pStep.innerText = "Step 3 of 3";
+                }, 800);
+
+                await worker.save();
+
+                pBar.style.width = '100%'; pText.innerText = '100%';
+                pTitle.innerText = "Success!"; pDesc.innerText = "PDF Downloaded successfully."; pStep.innerText = "Done";
+                
+                setTimeout(() => {
+                    modal.classList.add('hidden'); modal.classList.remove('flex');
+                    container.style.gap = originalGap; container.style.padding = originalPadding;
+                    pages.forEach(p => { p.style.boxShadow = ''; });
+                    pBar.style.width = '0%';
+                }, 1000);
+
+            } catch (err) {
+                console.error(err);
+                pTitle.innerText = "Error Occurred"; pDesc.innerText = "Check console.";
+                setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>
+
+```
